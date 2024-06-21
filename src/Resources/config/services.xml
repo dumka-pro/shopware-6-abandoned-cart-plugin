@@ -2,7 +2,9 @@
 <container xmlns="http://symfony.com/schema/dic/services"
            xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
            xsi:schemaLocation="http://symfony.com/schema/dic/services http://symfony.com/schema/dic/services/services-1.0.xsd">
-
+    <imports>
+        <import resource="./events.xml"/>
+    </imports>
     <services>
         <service id="MailCampaigns\AbandonedCart\Core\Checkout\AbandonedCart\AbandonedCartDefinition">
             <tag name="shopware.entity.definition" entity="abandoned_cart" />
@@ -16,6 +18,7 @@
         <service id="MailCampaigns\AbandonedCart\Core\Checkout\AbandonedCart\AbandonedCartManager">
             <argument type="service" id="MailCampaigns\AbandonedCart\Core\Checkout\Cart\CartRepository" />
             <argument type="service" id="abandoned_cart.repository" />
+            <argument type="service" id="event_dispatcher"/>
         </service>
 
         <service id="MailCampaigns\AbandonedCart\Command\DeleteAbandonedCartCommand">
