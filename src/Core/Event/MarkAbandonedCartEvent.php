@@ -2,8 +2,12 @@
 namespace MailCampaigns\AbandonedCart\Core\Event;
 
 use Doctrine\DBAL\Types\StringType;
+use MailCampaigns\AbandonedCart\Core\Checkout\AbandonedCart\AbandonedCartDefinition;
+use MailCampaigns\AbandonedCart\Core\Checkout\AbandonedCart\AbandonedCartEntity;
+use Shopware\Core\Checkout\Customer\CustomerDefinition;
 use Shopware\Core\Content\Flow\Dispatching\Aware\ScalarValuesAware;
 use Shopware\Core\Framework\Context;
+use Shopware\Core\Framework\Event\EventData\EntityType;
 use Shopware\Core\Framework\Event\EventData\EventDataCollection;
 use Shopware\Core\Framework\Event\EventData\MailRecipientStruct;
 use Shopware\Core\Framework\Event\EventData\ScalarValueType;
@@ -15,19 +19,24 @@ class MarkAbandonedCartEvent extends Event implements MailAware,ScalarValuesAwar
 {
     public const EVENT_NAME = 'dumka.abandoned_cart.marked';
 
-    private $cartId;
+    private $abandoned_cart;
+
+    private $customer;
     private $mailRecipientStruct;
     private Context $context;
 
-    public function __construct(string $cartId, Context $context)
+    public function __construct(Context $context,AbandonedCartEntity $entity)
     {
-        $this->cartId = $cartId;
+        $this->abandoned_cart = $entity;
         $this->context = $context;
     }
 
-    public function getCartId(): string
+    /**
+     * @return AbandonedCartEntity
+     */
+    public function getAbandonedCart(): string
     {
-        return $this->cartId;
+        return $this->abandoned_cart;
     }
 
     public function getName(): string
@@ -38,7 +47,7 @@ class MarkAbandonedCartEvent extends Event implements MailAware,ScalarValuesAwar
     public static function getAvailableData(): EventDataCollection
     {
         return (new EventDataCollection())
-            ->add('cartId', new ScalarValueType('string'));
+            ->add('abandoned_cart', new EntityType(AbandonedCartDefinition::class))
     }
 
     public function getContext(): Context
@@ -49,8 +58,8 @@ class MarkAbandonedCartEvent extends Event implements MailAware,ScalarValuesAwar
     public function getValues(): array
     {
         return [
-            'cartId' => $this->cartId,
-        ];
+            'abandoned_cart' => $this->abandoned_cart,
+            ];
     }
 
     public function getMailStruct(): MailRecipientStruct
@@ -64,7 +73,6 @@ class MarkAbandonedCartEvent extends Event implements MailAware,ScalarValuesAwar
 
     public function getSalesChannelId(): string
     {
-        //TODO: get sales channel id from abbandoned cart
-        return '';
+        return $this->abandoned_cart->getSalesChannelId();
     }
 }

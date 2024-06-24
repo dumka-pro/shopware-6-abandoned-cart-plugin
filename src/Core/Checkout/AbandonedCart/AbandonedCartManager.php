@@ -39,7 +39,8 @@ final class AbandonedCartManager
             $abandonedCart = AbandonedCartFactory::createFromArray($cart);
 
             $context = new Context(new SystemSource());
-            $this->abandonedCartRepository->upsert([
+            /** @var  \Shopware\Core\Framework\DataAbstractionLayer\Event\EntityWrittenContainerEvent $res */
+            $res = $this->abandonedCartRepository->upsert([
                 [
                     'cartToken' => $abandonedCart->getCartToken(),
                     'price' => $abandonedCart->getPrice(),
@@ -48,7 +49,17 @@ final class AbandonedCartManager
                     'salesChannelId' => $abandonedCart->getSalesChannelId(),
                 ],
             ],$context);
-            $this->eventDispatcher->dispatch(new MarkAbandonedCartEvent($abandonedCart->getId(),$context));
+
+            $writtenEvents = $res->getEventByEntityName('abandoned_cart');
+            $abandonedCartId = null;
+            if ($writtenEvents !== null) {
+                foreach ($writtenEvents->getIds() as $id) {
+                    $abandonedCartId = $id;
+                    break; // Assuming you only need the first ID
+                }
+            }
+            $abandonedCartEntity = $this->abandonedCartRepository->search(new Criteria([$abandonedCartId]),$context)->get($abandonedCartId);
+            $this->eventDispatcher->dispatch(new MarkAbandonedCartEvent($context,$abandonedCartEntity),MarkAbandonedCartEvent::EVENT_NAME);
             $cnt++;
         }
 
@@ -68,7 +79,8 @@ final class AbandonedCartManager
             $context = new Context(new SystemSource());
 
             if ($abandonedCartId !== null) {
-                $this->eventDispatcher->dispatch(new DeleteAbandonedCartEvent($abandonedCartId,$context));
+                $abandonedCartEntity = $this->abandonedCartRepository->search(new Criteria([$abandonedCartId]),$context)->get($abandonedCartId);
+                $this->eventDispatcher->dispatch(new DeleteAbandonedCartEvent($context,$abandonedCartEntity),DeleteAbandonedCartEvent::EVENT_NAME);
                 $this->abandonedCartRepository->delete([
                     [
                         'id' => $abandonedCartId,

@@ -31,13 +31,15 @@ final class CartRepository
      */
     public function findMarkableAsAbandoned(): array
     {
-        $selectAbandonedCartNamesQuery = $this->getAbandonedCartNamesQuery();
-
         $field = $this->payloadExists() ? 'payload' : 'cart';
+        $considerAbandonedAfter = (new DateTime())->modify(sprintf(
+            '-%d seconds',
+            $this->systemConfigService->get('MailCampaignsAbandonedCart.config.markAbandonedAfter')
+        ));
+
         $statement = $this->connection->prepare(<<<SQL
             SELECT
                 cart.token,
-                cart.name,
                 cart.$field AS payload,
                 cart.price,
                 cart.line_item_count,
@@ -47,16 +49,25 @@ final class CartRepository
                 LOWER(HEX(cart.country_id)) AS country_id,
                 LOWER(HEX(cart.customer_id)) AS customer_id,
                 LOWER(HEX(cart.sales_channel_id)) AS sales_channel_id,
-                cart.created_at
+                cart.created_at,
+                cart.updated_at
             FROM cart
 
             LEFT JOIN abandoned_cart ON cart.token = abandoned_cart.cart_token
                 AND cart.sales_channel_id = abandoned_cart.sales_channel_id
 
+            LEFT JOIN order_customer ON cart.customer_id = order_customer.customer_id
+                AND order_customer.created_at >= IFNULL(cart.updated_at, cart.created_at)
+
+            JOIN customer ON cart.customer_id = customer.id
+                AND cart.sales_channel_id = customer.sales_channel_id
+                AND customer.active = 1
+
             WHERE abandoned_cart.id IS NULL
-            AND cart.`name` IN ($selectAbandonedCartNamesQuery)
-            AND cart.`customer_id` IS NOT NULL
-            AND cart.`customer_id` != ''
+            AND IFNULL(cart.updated_at, cart.created_at) < '{$considerAbandonedAfter->format('Y-m-d H:i:s.v')}'
+            AND order_customer.order_id IS NULL
+            AND cart.customer_id IS NOT NULL
+            AND cart.customer_id != ''
 
             ORDER BY cart.created_at
             LIMIT 100;
@@ -74,15 +85,12 @@ final class CartRepository
      */
     public function findTokensForUpdatedOrDeletedWithAbandonedCartAssociation(): array
     {
-        $selectAbandonedCartNamesQuery = $this->getAbandonedCartNamesQuery();
-
         $statement = $this->connection->prepare(<<<SQL
             SELECT
                 abandoned_cart.cart_token AS token
             FROM abandoned_cart
 
             LEFT JOIN cart ON abandoned_cart.cart_token = cart.token
-                AND cart.`name` IN ($selectAbandonedCartNamesQuery)
 
             WHERE cart.token IS NULL;
         SQL);
