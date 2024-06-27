@@ -1,13 +1,10 @@
 <?php
 namespace MailCampaigns\AbandonedCart\Core\Event;
 
-use Doctrine\DBAL\Types\StringType;
-use MailCampaigns\AbandonedCart\Core\Checkout\AbandonedCart\AbandonedCartDefinition;
 use MailCampaigns\AbandonedCart\Core\Checkout\AbandonedCart\AbandonedCartEntity;
-use Shopware\Core\Checkout\Customer\CustomerDefinition;
 use Shopware\Core\Content\Flow\Dispatching\Aware\ScalarValuesAware;
 use Shopware\Core\Framework\Context;
-use Shopware\Core\Framework\Event\EventData\EntityType;
+use Shopware\Core\Framework\Event\EventData\ArrayType;
 use Shopware\Core\Framework\Event\EventData\EventDataCollection;
 use Shopware\Core\Framework\Event\EventData\MailRecipientStruct;
 use Shopware\Core\Framework\Event\EventData\ScalarValueType;
@@ -25,16 +22,16 @@ class MarkAbandonedCartEvent extends Event implements MailAware,ScalarValuesAwar
     private $mailRecipientStruct;
     private Context $context;
 
-    public function __construct(Context $context,AbandonedCartEntity $entity)
+    public function __construct(Context $context,array $cart)
     {
-        $this->abandoned_cart = $entity;
+        $this->abandoned_cart = $cart;
         $this->context = $context;
     }
 
     /**
      * @return AbandonedCartEntity
      */
-    public function getAbandonedCart(): string
+    public function getAbandonedCart(): array
     {
         return $this->abandoned_cart;
     }
@@ -47,7 +44,7 @@ class MarkAbandonedCartEvent extends Event implements MailAware,ScalarValuesAwar
     public static function getAvailableData(): EventDataCollection
     {
         return (new EventDataCollection())
-            ->add('abandoned_cart', new EntityType(AbandonedCartDefinition::class))
+            ->add('cart', new ArrayType(new ScalarValueType(ScalarValueType::TYPE_STRING)));
     }
 
     public function getContext(): Context
@@ -73,6 +70,6 @@ class MarkAbandonedCartEvent extends Event implements MailAware,ScalarValuesAwar
 
     public function getSalesChannelId(): string
     {
-        return $this->abandoned_cart->getSalesChannelId();
+        return $this->abandoned_cart['sales_channel_id'];
     }
 }

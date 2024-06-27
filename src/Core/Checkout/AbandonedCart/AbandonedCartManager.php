@@ -8,6 +8,7 @@ use Doctrine\DBAL\Exception;
 use MailCampaigns\AbandonedCart\Core\Checkout\Cart\CartRepository;
 use MailCampaigns\AbandonedCart\Core\Event\DeleteAbandonedCartEvent;
 use MailCampaigns\AbandonedCart\Core\Event\MarkAbandonedCartEvent;
+use Shopware\Core\Checkout\Cart\AbstractCartPersister;
 use Shopware\Core\Framework\Api\Context\SystemSource;
 use Shopware\Core\Framework\Context;
 use Shopware\Core\Framework\DataAbstractionLayer\EntityRepository;
@@ -49,17 +50,7 @@ final class AbandonedCartManager
                     'salesChannelId' => $abandonedCart->getSalesChannelId(),
                 ],
             ],$context);
-
-            $writtenEvents = $res->getEventByEntityName('abandoned_cart');
-            $abandonedCartId = null;
-            if ($writtenEvents !== null) {
-                foreach ($writtenEvents->getIds() as $id) {
-                    $abandonedCartId = $id;
-                    break; // Assuming you only need the first ID
-                }
-            }
-            $abandonedCartEntity = $this->abandonedCartRepository->search(new Criteria([$abandonedCartId]),$context)->get($abandonedCartId);
-            $this->eventDispatcher->dispatch(new MarkAbandonedCartEvent($context,$abandonedCartEntity),MarkAbandonedCartEvent::EVENT_NAME);
+            $this->eventDispatcher->dispatch(new MarkAbandonedCartEvent($context,$cart),MarkAbandonedCartEvent::EVENT_NAME);
             $cnt++;
         }
 
