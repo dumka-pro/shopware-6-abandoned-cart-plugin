@@ -42,6 +42,8 @@ final class CartRepository
                 cart.token,
                 cart.$field AS payload,
                 cart.price,
+                cart.compressed,
+                cart.rule_ids,
                 cart.line_item_count,
                 LOWER(HEX(cart.currency_id)) AS currency_id,
                 LOWER(HEX(cart.shipping_method_id)) AS shipping_method_id,
