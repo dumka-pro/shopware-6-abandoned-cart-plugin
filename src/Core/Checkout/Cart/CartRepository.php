@@ -40,6 +40,7 @@ final class CartRepository
         $statement = $this->connection->prepare(<<<SQL
             SELECT
                 cart.token,
+                cart.name,
                 cart.$field AS payload,
                 cart.price,
                 cart.compressed,
@@ -68,8 +69,8 @@ final class CartRepository
             WHERE abandoned_cart.id IS NULL
             AND IFNULL(cart.updated_at, cart.created_at) < '{$considerAbandonedAfter->format('Y-m-d H:i:s.v')}'
             AND order_customer.order_id IS NULL
-            AND cart.customer_id IS NOT NULL
-            AND cart.customer_id != ''
+            AND cart.`customer_id` IS NOT NULL
+            AND cart.`customer_id` != ''
 
             ORDER BY cart.created_at
             LIMIT 100;
