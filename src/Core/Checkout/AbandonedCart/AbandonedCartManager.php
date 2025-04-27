@@ -9,11 +9,13 @@ use MailCampaigns\AbandonedCart\Core\Checkout\AbandonedCart\Event\AfterAbandoned
 use MailCampaigns\AbandonedCart\Core\Checkout\AbandonedCart\Event\AfterAbandonedCartUpdatedEvent;
 use MailCampaigns\AbandonedCart\Core\Checkout\AbandonedCart\Event\AfterCartMarkedAsAbandonedEvent;
 use MailCampaigns\AbandonedCart\Core\Checkout\Cart\CartRepository;
+use Shopware\Core\Defaults;
 use Shopware\Core\Framework\Api\Context\SystemSource;
 use Shopware\Core\Framework\Context;
 use Shopware\Core\Framework\DataAbstractionLayer\EntityRepository;
 use Shopware\Core\Framework\DataAbstractionLayer\Search\Criteria;
 use Shopware\Core\Framework\DataAbstractionLayer\Search\Filter\EqualsFilter;
+use Shopware\Core\System\SystemConfig\SystemConfigService;
 use Symfony\Contracts\EventDispatcher\EventDispatcherInterface;
 
 /**
@@ -24,6 +26,7 @@ final class AbandonedCartManager
     public function __construct(
         private readonly CartRepository $cartRepository,
         private readonly EntityRepository $abandonedCartRepository,
+        private readonly SystemConfigService $systemConfigService,
         private readonly EventDispatcherInterface $eventDispatcher,
     ) {
     }
@@ -69,6 +72,11 @@ final class AbandonedCartManager
 
         $context = new Context(new SystemSource());
 
+        $considerAbandonedAfter = (new \DateTime())->modify(sprintf(
+            '-%d seconds',
+            $this->systemConfigService->get('MailCampaignsAbandonedCart.config.markAbandonedAfter')
+        ))->format(Defaults::STORAGE_DATE_TIME_FORMAT);
+
         foreach ($this->cartRepository->findAbandonedCartsWithCriteria(true) as $cart) {
             $abandonedCart = AbandonedCartFactory::createFromArray($cart);
 
@@ -87,7 +95,9 @@ final class AbandonedCartManager
                 ],
             ], $context);
 
-            $this->eventDispatcher->dispatch(new AfterAbandonedCartUpdatedEvent($abandonedCart, $cart, $context));
+            if ($cart['modified_at'] < $considerAbandonedAfter) {
+                $this->eventDispatcher->dispatch(new AfterAbandonedCartUpdatedEvent($abandonedCart, $cart, $context));
+            }
 
             $cnt++;
         }
