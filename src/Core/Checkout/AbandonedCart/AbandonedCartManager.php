@@ -74,6 +74,9 @@ final class AbandonedCartManager
 
             // Get the abandoned cart ID by token.
             $abandonedCartId = $this->findAbandonedCartIdByToken($abandonedCart->getCartToken());
+            if ($abandonedCartId === null) {
+                continue;
+            }
 
             $abandonedCart->setId($abandonedCartId);
 
