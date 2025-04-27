@@ -9,6 +9,7 @@ use Doctrine\DBAL\ArrayParameterType;
 use Doctrine\DBAL\Connection;
 use Doctrine\DBAL\Exception;
 use MailCampaigns\AbandonedCart\Service\ShopwareVersionHelper;
+use Shopware\Core\Defaults;
 use Shopware\Core\Framework\Adapter\Cache\CacheValueCompressor;
 use Shopware\Core\System\SystemConfig\SystemConfigService;
 
@@ -122,6 +123,15 @@ final class CartRepository
                 continue;
             }
 
+            if($retrieveUpdated) {
+                /** @var ModificationTimeStruct|null $modificationTime */
+                $modificationTime = $cart->getExtension(ModificationTimeStruct::CART_EXTENSION_NAME);
+
+                $data[$key]['modified_at'] = $modificationTime?->getModifiedAt()?->format(Defaults::STORAGE_DATE_TIME_FORMAT)
+                    ?? $data[$key]['c_updated_at']
+                    ?? $data[$key]['created_at'];
+            }
+
             // Remove customers that have placed an order after the cart was created
             $qb = $this->connection->createQueryBuilder();
             $qb->select('oc.id')
@@ -175,10 +185,7 @@ final class CartRepository
      */
     private function getAbandonedCartTokens(): array
     {
-        $considerAbandonedAfter = (new DateTime())->modify(sprintf(
-            '-%d seconds',
-            $this->systemConfigService->get('MailCampaignsAbandonedCart.config.markAbandonedAfter')
-        ));
+        $considerAbandonedAfter = $this->getConsiderAbandonedAfterDate();
 
         if($this->versionHelper->getMajorMinorShopwareVersion() === '6.5') {
             $sql = <<<SQL
@@ -214,6 +221,14 @@ final class CartRepository
         $statement = $this->connection->prepare($sql);
 
         return $statement->executeQuery()->fetchFirstColumn();
+    }
+
+    private function getConsiderAbandonedAfterDate(): DateTime
+    {
+        return (new DateTime())->modify(sprintf(
+            '-%d seconds',
+            $this->systemConfigService->get('MailCampaignsAbandonedCart.config.markAbandonedAfter')
+        ));
     }
 
     /**
