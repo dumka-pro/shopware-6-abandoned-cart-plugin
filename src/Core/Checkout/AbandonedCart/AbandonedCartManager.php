@@ -78,31 +78,6 @@ final class AbandonedCartManager
         return $cnt;
     }
 
-    /**
-     * @return int The number of deleted "abandoned" carts.
-     * @throws Exception
-     */
-    public function cleanUp(): int
-    {
-        $cnt = 0;
-
-        foreach ($this->cartRepository->findOrphanedAbandonedCartTokens() as $token) {
-            $abandonedCartId = $this->findAbandonedCartIdByToken($token);
-
-            if ($abandonedCartId !== null) {
-                $this->abandonedCartRepository->delete([
-                    [
-                        'id' => $abandonedCartId,
-                    ],
-                ], new Context(new SystemSource()));
-
-                $cnt++;
-            }
-        }
-
-        return $cnt;
-    }
-
     private function findAbandonedCartIdByToken(string $token): ?string
     {
         $criteria = new Criteria();

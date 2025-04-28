@@ -148,32 +148,6 @@ final class CartRepository
     }
 
     /**
-     * Returns an array of cart tokens that are considered "abandoned" and no longer exist in the cart table,
-     * but still have an association in the abandoned_cart table.
-     * @throws Exception
-     */
-    public function findOrphanedAbandonedCartTokens(): array
-    {
-        $selectAbandonedCartTokensQuery = $this->generateAbandonedCartTokensQuery();
-
-        $statement = $this->connection->prepare(<<<SQL
-            SELECT
-                abandoned_cart.cart_token AS token
-            FROM abandoned_cart
-
-            LEFT JOIN cart ON abandoned_cart.cart_token = cart.token
-                AND cart.`token` IN ($selectAbandonedCartTokensQuery)
-
-            WHERE cart.token IS NULL;
-        SQL);
-
-        return array_column(
-            $statement->executeQuery()->fetchAllAssociative(),
-            'token'
-        );
-    }
-
-    /**
      * Generates an SQL query to retrieve tokens of carts that are considered abandoned.
      *
      * This function constructs an SQL query that selects the most recent cart token
