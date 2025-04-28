@@ -160,7 +160,10 @@ final class CartRepository
      */
     private function getAbandonedCartTokens(): array
     {
-        $considerAbandonedAfter = $this->getConsiderAbandonedAfterDate();
+        $considerAbandonedAfter = (new DateTime())->modify(sprintf(
+            '-%d seconds',
+            $this->systemConfigService->get('MailCampaignsAbandonedCart.config.markAbandonedAfter')
+        ));
 
         if($this->versionHelper->getMajorMinorShopwareVersion() === '6.5') {
             $sql = <<<SQL
@@ -198,14 +201,6 @@ final class CartRepository
         $statement = $this->connection->prepare($sql);
 
         return $statement->executeQuery()->fetchFirstColumn();
-    }
-
-    private function getConsiderAbandonedAfterDate(): DateTime
-    {
-        return (new DateTime())->modify(sprintf(
-            '-%d seconds',
-            $this->systemConfigService->get('MailCampaignsAbandonedCart.config.markAbandonedAfter')
-        ));
     }
 
     /**
