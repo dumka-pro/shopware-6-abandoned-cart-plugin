@@ -62,7 +62,6 @@ final class CartRepository
                 ->addSelect('c.line_item_count')
                 ->from('cart', 'c')
                 ->leftJoin('c', 'abandoned_cart', 'ac', 'c.token = ac.cart_token')
-                ->join('c', 'customer', 'customer', 'customer.id = c.customer_id AND customer.active = 1')
                 ->where($qb->expr()->in('c.token', ':tokens'))
                 ->setParameter('tokens', $abandonedCartTokens, ArrayParameterType::STRING)
                 ->orderBy('c.created_at', 'ASC')
@@ -88,7 +87,6 @@ final class CartRepository
                 ->addSelect('c.line_item_count')
                 ->from('cart', 'c')
                 ->leftJoin('c', 'abandoned_cart', 'ac', 'c.token = ac.cart_token')
-                ->join('c', 'customer', 'customer', 'customer.id = c.customer_id AND customer.active = 1')
                 ->where($qb->expr()->in('c.token', ':tokens'))
                 ->setParameter('tokens', $abandonedCartTokens, ArrayParameterType::STRING)
                 ->orderBy('c.created_at', 'ASC')
@@ -175,6 +173,7 @@ final class CartRepository
                         1
                     ) AS `token`
                 FROM cart
+                INNER JOIN customer ON customer.id = cart.customer_id AND customer.active = 1
                 WHERE IFNULL(cart.updated_at, cart.created_at) < '{$considerAbandonedAfter->format('Y-m-d H:i:s.v')}'
                 AND cart.customer_id IS NOT NULL
                 GROUP BY cart.customer_id
@@ -189,6 +188,7 @@ final class CartRepository
                         1
                     ) AS `token`
                 FROM cart
+                INNER JOIN customer ON customer.id = cart.customer_id AND customer.active = 1
                 WHERE cart.created_at < '{$considerAbandonedAfter->format('Y-m-d H:i:s.v')}'
                 GROUP BY cart.customer_id
             SQL;
